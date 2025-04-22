@@ -34,9 +34,7 @@ def extract_lines_from_pdf(pdf_path):
                     all_lines.extend(lines)
     except FileNotFoundError:
         return f"Error: File not found at '{pdf_path}'"
-    
-    # for line in all_lines:
-    #     print(line)
+
     return all_lines
 
 def get_index_of_first_digit(tokens):
@@ -106,12 +104,14 @@ if __name__ == "__main__":
 
             last_line = ""
             for line in extracted_lines:
-
                 # work with older PDFs
                 match = re.match(results_pattern, line)
                 if match:
-                    if last_line in ["01", " of "] or last_line.startswith("MD") or last_line.startswith("Director"):
+                    if last_line in ["01", "02", " of "] or last_line.startswith("MD") or last_line.startswith("Director") or last_line.startswith("90"):
                         continue
+
+                    last_line = last_line.strip()
+                    line = line.strip()
 
                     if last_line not in results:
                         results[last_line] = [] 
@@ -124,10 +124,16 @@ if __name__ == "__main__":
                         continue
 
                     tokens = line.split()
+                    if "25-Hydroxy" in tokens: 
+                        tokens.remove("25-Hydroxy")
+
                     index = get_index_of_first_digit(tokens)
                     k = " ".join(tokens[:index])
                     k = k.replace("Above High Normal", "")
+                    k = k.replace("Below High Normal", "")
+                    k = k.strip()
                     v = tokens[index]
+                    v = v.strip()
 
                     if k not in results:
                         results[k] = [] 
@@ -142,5 +148,8 @@ if __name__ == "__main__":
     sorted_results = sorted(results.items())
     # for key, val in sorted_results:
     #     print(f"{key}:\t{val}")
+
+    for k in sorted(results.keys()):
+        print(k)
 
     save_plots_to_pdf(results) 
