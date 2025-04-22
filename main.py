@@ -1,7 +1,10 @@
 import re
+import os
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import datetime
 from PyPDF2 import PdfReader
 
-pdf_files = ['docs/7_18_23.pdf', 'docs/1_6_23.pdf']
 results_pattern = r"^(?!0\d+$)0?$|^[1-9]\d*(\.\d+)?$|^0\.\d+$"
 
 def extract_collected_date(text):
@@ -42,14 +45,62 @@ def get_index_of_first_digit(tokens):
       return i
   return None
 
+def save_plots_to_pdf(results, output_pdf="results_plots.pdf"):
+    with PdfPages(output_pdf) as pdf:
+        for key, data_points in results.items():
+            x_dates = []
+            y_values = []
+            valid_data_points = []
+
+            for value, date_str in data_points:
+                try:
+                    date_obj = datetime.datetime.strptime(date_str, "%m/%d/%Y")
+                    numeric_value = float(value)
+                    valid_data_points.append((date_obj, numeric_value))
+                except ValueError:
+                    print(f"Warning: Skipping invalid data point for {key}: ({value}, {date_str})")
+                except TypeError:
+                    print(f"Warning: Skipping invalid data point for {key}: ({value}, {date_str})")
+
+            if valid_data_points:
+                valid_data_points.sort(key=lambda item: item[0])
+                x_dates = [dp[0] for dp in valid_data_points]
+                y_values = [dp[1] for dp in valid_data_points]
+
+                fig = plt.figure(figsize=(10, 5))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(x_dates, y_values, marker='o', linestyle='-')
+                ax.set_title(key)
+                ax.set_xlabel("Date")
+                ax.set_ylabel("Value")
+                ax.grid(True)
+                ax.tick_params(axis='x', rotation=45, which='major', labelsize=8)
+                plt.tight_layout()
+
+                pdf.savefig(fig)
+                plt.close(fig)
+            else:
+                print(f"No valid numerical data to plot for {key}, skipping PDF page.")
+        print(f"Plots saved to '{output_pdf}'")
+
 if __name__ == "__main__":
+    pdf_files = [] 
+
+    try:
+        for filename in os.listdir("docs"):
+            if filename.endswith(".pdf"):
+                pdf_files.append(os.path.join("docs", filename))
+    except FileNotFoundError:
+        print(f"Error: Directory '{"docs"}' not found.")
+
     results = {}
     for file in pdf_files:
         extracted_lines = extract_lines_from_pdf(file)
         if isinstance(extracted_lines, list):
             date = extract_collected_date(extracted_lines)
             if date is None: 
-                print("Error collecting date for file <get filename>")
+                print(f"Error collecting date for file {file}: This file will be skipped")
+                continue
             else:
                 print(f"Reading results collected on {date}")
 
@@ -86,8 +137,10 @@ if __name__ == "__main__":
                 last_line = line
 
         else:
-            print(f"Error extracting <get_filename>: {extracted_lines}")
+            print(f"Error extracting {file}: {extracted_lines}")
     
     sorted_results = sorted(results.items())
-    for key, val in sorted_results:
-        print(f"{key}:\t{val}")
+    # for key, val in sorted_results:
+    #     print(f"{key}:\t{val}")
+
+    save_plots_to_pdf(results) 
