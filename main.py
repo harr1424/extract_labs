@@ -1,7 +1,7 @@
 import re
 from PyPDF2 import PdfReader
 
-pdf_files = ['docs/7_18_23.pdf']
+pdf_files = ['docs/7_18_23.pdf', 'docs/1_6_23.pdf']
 results_pattern = r"^(?!0\d+$)0?$|^[1-9]\d*(\.\d+)?$|^0\.\d+$"
 
 def extract_collected_date(text):
@@ -32,9 +32,15 @@ def extract_lines_from_pdf(pdf_path):
     except FileNotFoundError:
         return f"Error: File not found at '{pdf_path}'"
     
-    for line in all_lines:
-        print(line)
+    # for line in all_lines:
+    #     print(line)
     return all_lines
+
+def get_index_of_first_digit(tokens):
+  for i, s in enumerate(tokens):
+    if s and s[0].isdigit():
+      return i
+  return None
 
 if __name__ == "__main__":
     results = {}
@@ -49,6 +55,8 @@ if __name__ == "__main__":
 
             last_line = ""
             for line in extracted_lines:
+
+                # work with older PDFs
                 match = re.match(results_pattern, line)
                 if match:
                     if last_line in ["01", " of "] or last_line.startswith("MD"):
@@ -58,11 +66,28 @@ if __name__ == "__main__":
                         results[last_line] = [] 
 
                     results[last_line].append((line, date))
+                
+                # work with Walk In Labs results
+                if "/" in line and "Final" in line:
+                    if line.startswith("Specimen"):
+                        continue
+
+                    tokens = line.split()
+                    index = get_index_of_first_digit(tokens)
+                    k = " ".join(tokens[:index])
+                    k = k.replace("Above High Normal", "")
+                    v = tokens[index]
+
+                    if k not in results:
+                        results[k] = [] 
+
+                    results[k].append((v, date))
 
                 last_line = line
 
         else:
             print(f"Error extracting <get_filename>: {extracted_lines}")
     
-    for key, val in results.items():
+    sorted_results = sorted(results.items())
+    for key, val in sorted_results:
         print(f"{key}:\t{val}")
