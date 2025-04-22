@@ -110,7 +110,7 @@ if __name__ == "__main__":
                 # work with older PDFs
                 match = re.match(results_pattern, line)
                 if match:
-                    if last_line in ["01", " of "] or last_line.startswith("MD"):
+                    if last_line in ["01", " of "] or last_line.startswith("MD") or last_line.startswith("Director"):
                         continue
 
                     if last_line not in results:
